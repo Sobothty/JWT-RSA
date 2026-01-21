@@ -5,24 +5,57 @@ import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import org.example.domain.User;
 
-import java.security.interfaces.RSAPrivateKey;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
+import java.util.Date;
+import java.util.Map;
 
 public class Jwt {
-    public static String createJwt(JWTClaimsSet claimsSet, RSAPrivateKey privateKey) throws JOSEException {
-        JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256)
-                .type(JOSEObjectType.JWT)
+    public static String createToken(User user, PrivateKey privateKey) throws JOSEException {
+
+        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
+                .subject(user.getUuid())
+                .issuer("http://localhost:8080")
+                .issueTime(new Date())
+                .expirationTime(Date.from(new Date().toInstant().plusSeconds(3600)))
+                .claim("email", user.getEmail())
+                .claim("role", user.getRole())
                 .build();
 
-        SignedJWT signedJWT = new SignedJWT(header, claimsSet);
-        signedJWT.sign(new RSASSASigner(privateKey));
+        SignedJWT signedJWT = new SignedJWT(
+                new JWSHeader(JWSAlgorithm.RS256), jwtClaimsSet
+        );
+
+        signedJWT.sign(
+                new RSASSASigner(privateKey)
+        );
         return signedJWT.serialize();
     }
 
-    public static boolean verifyJwt(String token, RSAPublicKey publicKey) throws ParseException, JOSEException {
+    public static void verifyToken(String token, PublicKey publicKey) throws ParseException, JOSEException {
         SignedJWT jwt = SignedJWT.parse(token);
-        return jwt.verify(new RSASSAVerifier(publicKey));
+
+        boolean isValidToken = jwt.verify(new RSASSAVerifier((RSAPublicKey) publicKey));
+
+        // header verification
+        JWSHeader header = jwt.getHeader();
+        System.out.println("\n----- HEADER -----");
+        System.out.println("Algorithm: " + header.getAlgorithm());
+        System.out.println("Raw JSON: " + header.toJSONObject());
+
+        // payload verification
+        JWTClaimsSet claims = jwt.getJWTClaimsSet();
+        System.out.println("\n----- PAYLOAD -----");
+        for (Map.Entry<String, Object> entry : claims.getClaims().entrySet()) {
+            System.out.println(entry.getKey() + " : " + entry.getValue());
+        }
+
+        // signature verification
+        System.out.println("\n----- SIGNATURE -----");
+        System.out.println("Verified: " + isValidToken + "");
     }
 }

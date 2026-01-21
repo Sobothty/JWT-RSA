@@ -1,0 +1,62 @@
+package org.example.config;
+
+import java.io.InputStream;
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
+
+public class LoaderKeys {
+
+    public static PrivateKey loadingPrivateKey(String resourcePath) throws Exception {
+
+        InputStream is = LoaderKeys.class
+                .getClassLoader()
+                .getResourceAsStream(resourcePath);
+
+        if (is == null) {
+            throw new IllegalArgumentException(
+                    "Key file not found in classpath: " + resourcePath
+            );
+        }
+
+        String key = new String(is.readAllBytes())
+                .replace("-----BEGIN PRIVATE KEY-----", "")
+                .replace("-----END PRIVATE KEY-----", "")
+                .replaceAll("\\s", "");
+
+        byte[] decoded = Base64.getDecoder().decode(key);
+        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(decoded);
+
+        return KeyFactory.getInstance("RSA").generatePrivate(spec);
+    }
+
+
+    public static PublicKey loadPublicKey(String resourcePath) throws Exception {
+
+        InputStream is = LoaderKeys.class
+                .getClassLoader()
+                .getResourceAsStream(resourcePath);
+
+        if (is == null) {
+            throw new IllegalArgumentException(
+                    "Key file not found in classpath: " + resourcePath
+            );
+        }
+
+        String key = new String(is.readAllBytes())
+                .replace("-----BEGIN PUBLIC KEY-----", "")
+                .replace("-----END PUBLIC KEY-----", "")
+                .replaceAll("\\s", "");
+
+        byte[] decoded = Base64.getDecoder().decode(key);
+        X509EncodedKeySpec spec = new X509EncodedKeySpec(decoded);
+
+        return KeyFactory.getInstance("RSA").generatePublic(spec);
+    }
+
+}
+
+
