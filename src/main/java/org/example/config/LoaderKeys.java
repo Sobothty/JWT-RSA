@@ -11,13 +11,12 @@ import java.util.Base64;
 public class LoaderKeys {
 
     public static PrivateKey loadingPrivateKey(String resourcePath) throws Exception {
-
         InputStream is = LoaderKeys.class
                 .getClassLoader()
                 .getResourceAsStream(resourcePath);
 
         if (is == null) {
-            throw new IllegalArgumentException(
+            throw new RuntimeException(
                     "Key file not found in classpath: " + resourcePath
             );
         }
@@ -41,7 +40,7 @@ public class LoaderKeys {
                 .getResourceAsStream(resourcePath);
 
         if (is == null) {
-            throw new IllegalArgumentException(
+            throw new RuntimeException(
                     "Key file not found in classpath: " + resourcePath
             );
         }

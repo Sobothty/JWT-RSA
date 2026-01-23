@@ -7,10 +7,8 @@ import java.util.List;
 
 public class UserData {
 
-    // In-memory user store (demo purpose)
     private static final List<User> users = new ArrayList<>();
 
-    // Static block to preload users
     static {
         users.add(create("u001", "user1@mail.com", "123456", "ADMIN"));
         users.add(create("u002", "user2@mail.com", "123456", "USER"));
@@ -25,7 +23,7 @@ public class UserData {
     }
 
     public static List<User> view() {
-        return List.copyOf(users); // prevents modification
+        return List.copyOf(users);
     }
 
     public static User createUser(String uuid, String email, String password, String role) {
@@ -38,7 +36,7 @@ public class UserData {
         User user = new User();
         user.setUuid(uuid);
         user.setEmail(email);
-        user.setPassword(password); // demo only (plain text)
+        user.setPassword(password);
         user.setRole(role);
         return user;
     }

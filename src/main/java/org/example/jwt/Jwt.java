@@ -11,23 +11,34 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
+import java.time.Instant;
 import java.util.Date;
-import java.util.Map;
+
+import static org.example.validate.JwtValidation.validateClaims;
 
 public class Jwt {
     public static String createToken(User user, PrivateKey privateKey) throws JOSEException {
 
+        Instant now = Instant.now();
+        Instant expiry = now.plusSeconds(600);
+
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
+                .audience("next-client")
+                .issuer("auth.javajwt.org")
                 .subject(user.getUuid())
-                .issuer("http://localhost:8080")
-                .issueTime(new Date())
-                .expirationTime(Date.from(new Date().toInstant().plusSeconds(3600)))
+                .issueTime(Date.from(now))
+                .expirationTime(Date.from(expiry))
                 .claim("email", user.getEmail())
                 .claim("role", user.getRole())
                 .build();
 
+        JWSHeader JwtHeader = new JWSHeader.Builder
+                (JWSAlgorithm.RS256)
+                .type(JOSEObjectType.JWT)
+                .build();
+
         SignedJWT signedJWT = new SignedJWT(
-                new JWSHeader(JWSAlgorithm.RS256), jwtClaimsSet
+                JwtHeader, jwtClaimsSet
         );
 
         signedJWT.sign(
@@ -36,26 +47,32 @@ public class Jwt {
         return signedJWT.serialize();
     }
 
-    public static void verifyToken(String token, PublicKey publicKey) throws ParseException, JOSEException {
-        SignedJWT jwt = SignedJWT.parse(token);
+    public static JWTClaimsSet verifyAndGetClaims(
+            String token,
+            PublicKey publicKey
+    ) throws ParseException, JOSEException {
 
-        boolean isValidToken = jwt.verify(new RSASSAVerifier((RSAPublicKey) publicKey));
-
-        // header verification
-        JWSHeader header = jwt.getHeader();
-        System.out.println("\n----- HEADER -----");
-        System.out.println("Algorithm: " + header.getAlgorithm());
-        System.out.println("Raw JSON: " + header.toJSONObject());
-
-        // payload verification
-        JWTClaimsSet claims = jwt.getJWTClaimsSet();
-        System.out.println("\n----- PAYLOAD -----");
-        for (Map.Entry<String, Object> entry : claims.getClaims().entrySet()) {
-            System.out.println(entry.getKey() + " : " + entry.getValue());
+        if (token == null || token.isBlank()) {
+            throw new IllegalArgumentException("Token is missing");
         }
 
-        // signature verification
-        System.out.println("\n----- SIGNATURE -----");
-        System.out.println("Verified: " + isValidToken + "");
+        if (!(publicKey instanceof RSAPublicKey rsaPublicKey)) {
+            throw new IllegalArgumentException("Invalid public key type");
+        }
+
+        SignedJWT signedJWT = SignedJWT.parse(token);
+
+        RSASSAVerifier verifier = new RSASSAVerifier(rsaPublicKey);
+        boolean signatureValid = signedJWT.verify(verifier);
+
+        if (!signatureValid) {
+            throw new SecurityException("Invalid JWT signature");
+        }
+
+        JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
+        validateClaims(claims);
+
+        return claims;
     }
+
 }
